@@ -35,7 +35,7 @@
   =========
   A plain
 
-    python ./rebuild_base_installers.py NODEMANAGER_VERSION_STRING
+    python rebuild_base_installers.py NODEMANAGER_VERSION_STRING
 
   We force you to give `seattle_repy/nmmain.py`'s version string 
   on the command line when you want to rebuild, so that your shell's 
@@ -68,12 +68,13 @@ import subprocess
 import glob
 
 # Add `./seattle_repy` to the sys path so we can import and check the 
-# actual files thaast will end up in the base installers.
+# actual files that will end up in the base installers.
 # We can do this as `./seattle_repy` is on the same hierarchy 
 # level in the filesystem as this program file.
 my_path = os.path.abspath(os.path.dirname(__file__))
 seattle_repy_path = os.path.join(my_path, "seattle_repy")
 sys.path.insert(0, seattle_repy_path)
+
 import softwareupdater
 import nmmain
 
@@ -86,29 +87,38 @@ rsa = dy_import_module("rsa.r2py")
 
 
 def rebuild_base_installers(version):
-  software_update_key = rsa.rsa_file_to_publickey(public_key_file)
-
-  repo_parent_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../DEPENDENCIES")
-
-  # Check variables first
+  # Check our callargs and internal variables first
   if version == "":
     print "You must supply a version string."
     print "usage: " + sys.argv[0] + " version"
+    sys.exit(1)
+
+  if not public_key_file:
+    print "public_key_file isn't set."
+    sys.exit(1)
+
+  if not private_key_file:
+    print "private_key_file isn't set."
     sys.exit(1)
 
   if software_update_url == "":
     print "software_update_url isn't set."
     sys.exit(1)
 
+
+  # Check the various directories used
   if not os.path.exists(base_installer_directory):
     print "base_installer_directory doesn't exist."
     sys.exit(1)
 
+  repo_parent_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../DEPENDENCIES")
   if not os.path.exists(repo_parent_dir):
     print "repo_parent_dir doesn't exist."
     sys.exit(1)
 
-  if not version:
+
+  # Check and match nmmain and softwareupdater internal config
+  if not nmmain.version:
     print "You need to set the version string in nmmain.py"
     sys.exit(1)
 
@@ -120,21 +130,24 @@ def rebuild_base_installers(version):
     print "Did not find the correct update url in softwareupdater.py" 
     sys.exit(1)
 
+  software_update_key = rsa.rsa_file_to_publickey(public_key_file)
   if not software_update_key == softwareupdater.softwareupdatepublickey:
     print "Did not find the correct update key in softwareupdater.py"
     sys.exit(1)
+
+
 
   # Now let's start building!
   print "Building new base installers at " + base_installer_directory
 
   try:
-    package_installers.package_installers(base_installer_directory, version, private_key_file, public_key_file)
+    package_installers.package_installers(base_installer_directory,
+        version, private_key_file, public_key_file)
 
   except Exception, e:
     print "Building base installers failed. Exception:", repr(e)
     sys.exit(1)
 
-  print "Changing base installer symlinks used by seattlegeni."
 
   os.chdir(base_installer_directory)
 
@@ -147,24 +160,21 @@ def rebuild_base_installers(version):
   os.symlink("seattle_" + version + "_mac.tgz", 'seattle_mac.tgz')
   os.symlink("seattle_" + version + "_win.zip", 'seattle_win.zip')
 
-  print 'New base installers created and installed for seattlegeni.'
+  print 'New base installers created and symlinked in', base_installer_directory
+  print '''
+(You might need to copy/move the installer tarballs and symlinks over to
+the appropriate custom installer builder "installers/base" directory.
+Use "cp -R BUILDDIR/* DESTDIR" or "mv BUILDDIR/* DESTDIR" for this to
+preserve the symlinks.)
+'''
 
-def main():
-  if not public_key_file:
-    print "public_key_file isn't set." 
-    sys.exit(1)
 
-  if not private_key_file:
-    print "private_key_file isn't set."
-    sys.exit(1)
-
-  try:
-    newversion = sys.argv[1]
-  except:
-    print "Usage: python ./rebuild_base_installers_for_seattlegeni.py version_STRING" 
-    sys.exit(1)
-
-  rebuild_base_installers(newversion)
 
 if __name__ == '__main__':
-  main()
+  try:
+    newversion = sys.argv[1]
+  except IndexError:
+    print "Usage: python rebuild_base_installers.py VERSION_STRING"
+    sys.exit(1)
+  rebuild_base_installers(newversion)
+
