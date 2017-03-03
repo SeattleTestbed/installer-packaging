@@ -21,11 +21,10 @@
   =============
   Before starting this program, adapt the configuration variables 
   below to suit your setup. These include the softwareupdater URL 
-  and key files, the nodemanager version string your installers will 
-  use, the user name for which to build the installers, the desired 
-  output dir for new installers, and the backup dir for old installers.
+  and key files, the nodemanager version string your installers will
+  use, and the desired output dir for new installers.
 
-  Make sure that the directories exist. Also, ensure that your 
+  Make sure that the directory exists. Also, ensure that your
   `seattle_repy/softwareupdater.py`'s software updater URL and 
   public key agree with what is given here.
   BE VERY CAREFUL about the softwareupdater-related items. 
@@ -34,9 +33,7 @@
 
   Execution
   =========
-  Once configured, run this program under a user account with `sudo` 
-  privileges. (Don't run under `sudo` right away, we will invoke it 
-  when we need it.)
+  A plain
 
     python ./rebuild_base_installers.py NODEMANAGER_VERSION_STRING
 
@@ -58,9 +55,6 @@ public_key_file = '/full/path/to/softwareupdater.publickey'
 private_key_file = '/full/path/to/softwareupdater.privatekey'
 
 base_installer_directory = '/full/path/to/baseinstaller/target/dir'
-base_installer_archive_dir = '/full/path/to/baseinstaller/archive'
-
-user = 'installer_package_owner'
 
 # End of customizable config items
 ###########################################################
@@ -71,8 +65,6 @@ import string
 import os
 import shutil
 import subprocess
-import pwd
-import grp
 import glob
 
 # Add `./seattle_repy` to the sys path so we can import and check the 
@@ -82,25 +74,24 @@ import glob
 my_path = os.path.abspath(os.path.dirname(__file__))
 seattle_repy_path = os.path.join(my_path, "seattle_repy")
 sys.path.insert(0, seattle_repy_path)
-from softwareupdater import softwareupdatepublickey
-from softwareupdater import softwareurl
-from nmmain import version
+import softwareupdater
+import nmmain
 
 import package_installers
 
 from repyportability import *
 add_dy_support(locals())
 
-dy_import_module_symbols("rsa.r2py")
+rsa = dy_import_module("rsa.r2py")
 
 
-def rebuild_base_installers(newversion):                                         
-  software_update_key = rsa_file_to_publickey(public_key_file)
+def rebuild_base_installers(version):
+  software_update_key = rsa.rsa_file_to_publickey(public_key_file)
 
   repo_parent_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../DEPENDENCIES")
 
   # Check variables first
-  if newversion == "":
+  if version == "":
     print "You must supply a version string."
     print "usage: " + sys.argv[0] + " version"
     sys.exit(1)
@@ -113,10 +104,6 @@ def rebuild_base_installers(newversion):
     print "base_installer_directory doesn't exist."
     sys.exit(1)
 
-  if not os.path.exists(base_installer_archive_dir):
-    print "base_installer_archive_dir doesn't exist."
-    sys.exit(1)
-
   if not os.path.exists(repo_parent_dir):
     print "repo_parent_dir doesn't exist."
     sys.exit(1)
@@ -125,34 +112,19 @@ def rebuild_base_installers(newversion):
     print "You need to set the version string in nmmain.py"
     sys.exit(1)
 
-  if not version == newversion:
+  if not nmmain.version == version:
     print "You need to set the version string which is same as the version string in nmmain.py"
     sys.exit(1)
 
-  if not software_update_url == softwareurl:
+  if not software_update_url == softwareupdater.softwareurl:
     print "Did not find the correct update url in softwareupdater.py" 
     sys.exit(1)
 
-  if not software_update_key == softwareupdatepublickey:
+  if not software_update_key == softwareupdater.softwareupdatepublickey:
     print "Did not find the correct update key in softwareupdater.py"
     sys.exit(1)
 
-  try:
-    pwd.getpwnam(user)
-  except KeyError:
-   print "user account " + user + " does not exist."
-   sys.exit(1)
-
   # Now let's start building!
-  print "Archiving old base installers to " + base_installer_archive_dir
-  print "Warning: failure after this point may leave seattlegeni with no base installers!"
-
-  for files in glob.glob(base_installer_directory + '/seattle_*' ):
-    if os.path.isfile(files):
-      shutil.move(files, base_installer_archive_dir)
-    else:
-      print "Skipping link/directory", files
-
   print "Building new base installers at " + base_installer_directory
 
   try:
@@ -169,12 +141,6 @@ def rebuild_base_installers(newversion):
   if not os.path.exists("seattle_"+ version +"_android.zip") or not os.path.exists("seattle_"+ version +"_linux.tgz") or not os.path.exists("seattle_"+ version +"_mac.tgz"):
     print "The base installers don't appear to have been created."
     sys.exit(1)
-
-  uid = pwd.getpwnam(user).pw_uid
-  gid = grp.getgrnam(user).gr_gid
-  for files in glob.glob('./seattle_*'):
-    if os.path.isfile(files):
-      os.chown(files, uid, gid)
 
   os.symlink("seattle_" + version + "_android.zip", 'seattle_android.zip')
   os.symlink("seattle_" + version + "_linux.tgz", 'seattle_linux.tgz')
