@@ -1722,7 +1722,7 @@ def perform_system_benchmarking():
     IOError if unable to create a log file.
 
   <Side Effects>
-    May initialize the service logger 'installInfo'.
+    May initialize the service logger 'installinfo'.
     
     Will create or append a temporary log file 'installer_benchmark.log'
     that will be used during the benchmark process, if the benchmarking is 
@@ -2143,7 +2143,7 @@ def main():
 
 
   # Initialize the service logger.
-  servicelogger.init('installInfo')
+  servicelogger.init('installinfo')
 
   # This catches Nokias/Androids/iPhones/iPads
   if platform.machine().startswith('armv'):
