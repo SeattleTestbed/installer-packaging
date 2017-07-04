@@ -145,7 +145,7 @@ def rebuild_base_installers(newversion):
 
   # Now let's start building!
   print "Archiving old base installers to " + base_installer_archive_dir
-  print "Warning: failure after this point may leave seattlegeni with no base installers!"
+  print "Warning: failure after this point may leave you with no base installers!"
 
   for files in glob.glob(base_installer_directory + '/seattle_*' ):
     if os.path.isfile(files):
@@ -162,7 +162,7 @@ def rebuild_base_installers(newversion):
     print "Building base installers failed. Exception:", repr(e)
     sys.exit(1)
 
-  print "Changing base installer symlinks used by seattlegeni."
+  print "Changing base installer symlinks."
 
   os.chdir(base_installer_directory)
 
@@ -181,7 +181,7 @@ def rebuild_base_installers(newversion):
   os.symlink("seattle_" + version + "_mac.tgz", 'seattle_mac.tgz')
   os.symlink("seattle_" + version + "_win.zip", 'seattle_win.zip')
 
-  print 'New base installers created and installed for seattlegeni.'
+  print 'New base installers created and installed.'
 
 def main():
   if not public_key_file:
@@ -195,7 +195,7 @@ def main():
   try:
     newversion = sys.argv[1]
   except:
-    print "Usage: python ./rebuild_base_installers_for_seattlegeni.py version_STRING" 
+    print "Usage: python ./rebuild_base_installers.py version_STRING" 
     sys.exit(1)
 
   rebuild_base_installers(newversion)
